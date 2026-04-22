@@ -49,12 +49,44 @@ function saveJSON(file, data) {
 }
 
 const YAD2_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   'Accept': 'application/json, text/plain, */*',
-  'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8',
-  'Referer': 'https://www.yad2.co.il/',
+  'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Referer': 'https://www.yad2.co.il/vehicles/motorcycles',
   'Origin': 'https://www.yad2.co.il',
+  'sec-ch-ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+  'sec-ch-ua-mobile': '?0',
+  'sec-ch-ua-platform': '"Windows"',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-site',
+  'Connection': 'keep-alive',
 };
+
+// Try both known Yad2 API endpoints
+const YAD2_BASES = [
+  'https://gw.yad2.co.il/feed-search-legacy/vehicles',
+  'https://gw.yad2.co.il/feed-search/vehicles',
+];
+
+async function fetchYad2(category, params) {
+  let lastErr;
+  for (const base of YAD2_BASES) {
+    try {
+      const url = `${base}/${category}?${params}`;
+      console.log(`[yad2] GET ${url}`);
+      const res = await fetch(url, { headers: YAD2_HEADERS, timeout: 15000 });
+      console.log(`[yad2] status=${res.status} base=${base}`);
+      if (!res.ok) { lastErr = new Error(`Yad2 ${res.status}`); continue; }
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
 
 // Map our category names to yad2 API paths
 const CATEGORY_MAP = {
@@ -124,12 +156,7 @@ app.get('/api/search', async (req, res) => {
     params.set('page', page);
     params.set('Order', '1');
 
-    const url = `https://gw.yad2.co.il/feed-search-legacy/vehicles/${apiCategory}?${params}`;
-    const yad2Res = await fetch(url, { headers: YAD2_HEADERS, timeout: 15000 });
-
-    if (!yad2Res.ok) throw new Error(`Yad2 returned ${yad2Res.status}`);
-
-    const data = await yad2Res.json();
+    const data = await fetchYad2(apiCategory, params);
     let items = data.data?.feed?.feed_items
       || data.feed?.feed_items
       || data.data?.rows
@@ -239,9 +266,7 @@ async function checkAlerts() {
       params.set('Order', '1');
 
       const category = CATEGORY_MAP[alert.category || 'motorcycles'];
-      const url = `https://gw.yad2.co.il/feed-search-legacy/vehicles/${category}?${params}`;
-      const yad2Res = await fetch(url, { headers: YAD2_HEADERS, timeout: 10000 });
-      if (!yad2Res.ok) continue;
+      let data; try { data = await fetchYad2(category, params); } catch { continue; }
 
       const data = await yad2Res.json();
       let items = data.data?.feed?.feed_items || data.feed?.feed_items || [];
@@ -304,4 +329,21 @@ app.get('/api/stats', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n✅  Yad2 Tool running on port ${PORT}`);
   console.log(`   Env: ${process.env.RENDER ? 'Render' : 'local'} | Data: ${DATA_DIR}\n`);
+});
+
+// ─── Debug endpoint ───────────────────────────────────────────────────────────
+// Visit /api/debug in browser to see raw Yad2 response
+app.get('/api/debug', async (req, res) => {
+  try {
+    const params = new URLSearchParams({ manufacturer: '118', page: '1' });
+    const data = await fetchYad2('motorcycles', params);
+    const keys = data ? Object.keys(data) : [];
+    const dataKeys = data?.data ? Object.keys(data.data) : [];
+    const sampleItems = data?.data?.feed?.feed_items?.slice(0, 2)
+      || data?.feed?.feed_items?.slice(0, 2)
+      || [];
+    res.json({ ok: true, topKeys: keys, dataKeys, sampleItems, rawSnippet: JSON.stringify(data).slice(0, 500) });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
 });
