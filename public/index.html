@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>יד2 — כלי חיפוש רכבים</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <span class="logo-badge">יד2</span>
+      <span class="logo-text">כלי חיפוש רכבים</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="tab-btn active" data-tab="search">🔍 חיפוש</button>
+      <button class="tab-btn" data-tab="alerts">🔔 התראות</button>
+      <button class="tab-btn" data-tab="tracking">📈 מעקב מחירים</button>
+    </div>
+    <div class="nav-status">
+      <span class="status-dot"></span>
+      <span id="server-status">מחובר</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════ SEARCH TAB ════════════════════════════════ -->
+<div class="tab-panel active" id="tab-search">
+  <div class="container">
+
+    <div class="filters-card">
+      <div class="filters-grid">
+        <div class="fg">
+          <label>קטגוריה</label>
+          <select id="f-category">
+            <option value="motorcycles">🏍 אופנועים</option>
+            <option value="scooters">🛵 קטנועים</option>
+            <option value="cars">🚗 רכבים פרטיים</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>יצרן</label>
+          <select id="f-manufacturer">
+            <option value="">כל היצרנים</option>
+            <optgroup label="אופנועים">
+              <option value="118">ימאהה</option>
+              <option value="62">הונדה</option>
+              <option value="88">קוואסאקי</option>
+              <option value="107">סוזוקי</option>
+              <option value="40">דוקאטי</option>
+              <option value="81">KTM</option>
+              <option value="102">BMW</option>
+              <option value="119">טריומף</option>
+              <option value="18">אפריליה</option>
+            </optgroup>
+            <optgroup label="רכבים">
+              <option value="16">טויוטה</option>
+              <option value="7">ב"מ וו</option>
+              <option value="8">מזדה</option>
+              <option value="19">יונדאי</option>
+              <option value="20">קיה</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="fg">
+          <label>דגם</label>
+          <input type="text" id="f-model" placeholder="לדוגמה: MT-07">
+        </div>
+        <div class="fg">
+          <label>דרגת רישיון</label>
+          <select id="f-license">
+            <option value="">כולם</option>
+            <option value="A">A — כבד (מעל 500 סמ"ק)</option>
+            <option value="A1">A1 — בינוני (עד 500 סמ"ק)</option>
+            <option value="A2">A2 — קל (עד 125 סמ"ק)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>שנה מ-</label>
+          <select id="f-year-from"><option value="">הכל</option></select>
+        </div>
+        <div class="fg">
+          <label>שנה עד</label>
+          <select id="f-year-to"><option value="">הכל</option></select>
+        </div>
+        <div class="fg">
+          <label>מחיר עד (₪)</label>
+          <input type="number" id="f-price" placeholder="ללא הגבלה" step="1000">
+        </div>
+        <div class="fg">
+          <label>ק"מ עד</label>
+          <input type="number" id="f-km" placeholder="ללא הגבלה" step="5000">
+        </div>
+      </div>
+      <div class="filters-actions">
+        <button class="btn-primary" onclick="doSearch(1)">חיפוש</button>
+        <button class="btn-secondary" onclick="exportCSV()">ייצוא Excel/CSV</button>
+        <button class="btn-ghost" onclick="saveAsAlert()">+ שמור כהתראה</button>
+        <button class="btn-ghost" onclick="clearFilters()">איפוס</button>
+        <div class="sort-wrap">
+          <label>מיון:</label>
+          <select id="sort-sel" onchange="doSearch(1)">
+            <option value="date">תאריך</option>
+            <option value="price_asc">מחיר ↑</option>
+            <option value="price_desc">מחיר ↓</option>
+            <option value="year_desc">שנה חדשה</option>
+            <option value="km_asc">ק"מ נמוך</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-row" id="stats-row" style="display:none">
+      <div class="stat-card"><div class="stat-label">תוצאות</div><div class="stat-val" id="s-total">0</div></div>
+      <div class="stat-card"><div class="stat-label">מחיר ממוצע</div><div class="stat-val" id="s-avg">—</div></div>
+      <div class="stat-card"><div class="stat-label">הזול ביותר</div><div class="stat-val" id="s-min">—</div></div>
+      <div class="stat-card"><div class="stat-label">היקר ביותר</div><div class="stat-val" id="s-max">—</div></div>
+    </div>
+
+    <div id="results-area">
+      <div class="empty-state">
+        <div class="empty-icon">🏍</div>
+        <p>הגדר פרמטרים ולחץ על חיפוש</p>
+      </div>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ ALERTS TAB ═══════════════════════════════ -->
+<div class="tab-panel" id="tab-alerts">
+  <div class="container">
+    <div class="section-header">
+      <h2>התראות על מודעות חדשות</h2>
+      <button class="btn-primary" onclick="checkAllAlerts()">בדוק עכשיו</button>
+    </div>
+    <p class="section-desc">הכלי בודק כל 10 דקות אוטומטית ומסמן מודעות חדשות שמתאימות לקריטריונים שלך.</p>
+    <div id="alerts-list">
+      <div class="empty-state"><div class="empty-icon">🔔</div><p>אין התראות פעילות.<br>שמור חיפוש כהתראה בלשונית החיפוש.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ TRACKING TAB ═════════════════════════════ -->
+<div class="tab-panel" id="tab-tracking">
+  <div class="container">
+    <div class="section-header">
+      <h2>מעקב מחירים</h2>
+      <span class="section-note">נתונים נאספים אוטומטית בכל חיפוש</span>
+    </div>
+    <div id="tracking-list">
+      <div class="empty-state"><div class="empty-icon">📈</div><p>בצע חיפושים כדי לצבור היסטוריית מחירים</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════ MODAL ═══════════════════════════════════ -->
+<div class="modal-overlay" id="modal" style="display:none" onclick="closeModal(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('modal').style.display='none'">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

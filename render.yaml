@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: yad2-tool
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install
+    startCommand: node server/index.js
+    envVars:
+      - key: RENDER
+        value: true
+      - key: NODE_ENV
+        value: production
