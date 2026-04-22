@@ -266,9 +266,11 @@ async function checkAlerts() {
       params.set('Order', '1');
 
       const category = CATEGORY_MAP[alert.category || 'motorcycles'];
-      let data; try { data = await fetchYad2(category, params); } catch { continue; }
+      let data;
+      try { data = await fetchYad2(category, params); } catch { continue; }
 
-      const data = await yad2Res.json();
+      // ← השורה הבעייתית "const data = await yad2Res.json();" הוסרה מכאן
+
       let items = data.data?.feed?.feed_items || data.feed?.feed_items || [];
       items = items.filter(i => i.type !== 'commercial_ad');
       if (alert.licenseType) items = filterByLicense(items, alert.licenseType);
@@ -332,7 +334,6 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 // ─── Debug endpoint ───────────────────────────────────────────────────────────
-// Visit /api/debug in browser to see raw Yad2 response
 app.get('/api/debug', async (req, res) => {
   try {
     const params = new URLSearchParams({ manufacturer: '118', page: '1' });
